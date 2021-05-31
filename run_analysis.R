@@ -92,7 +92,7 @@ View(head(df.meanstd, 5))
 
 ## creates a second, independent tidy data set with the average of each variable for each activity and each subject.
 df.avg <- df %>% group_by(subjectno, activityno, activitylabel) %>% summarise_each(funs(mean))
-print(df.avg)
+write.table(df.avg, file = "run_analysis_avg.txt", row.name=FALSE)
 
 
 

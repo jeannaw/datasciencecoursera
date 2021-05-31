@@ -124,5 +124,7 @@ First using 'group_by' function to group dataset `df` by columns `subjectno`, `a
 
 ```r
 df.avg <- df %>% group_by(subjectno, activityno, activitylabel) %>% summarise_each(funs(mean))
+write.table(df.avg, file = "run_analysis_avg.txt", row.name=FALSE)
+
 ```
 
