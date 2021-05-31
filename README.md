@@ -57,74 +57,65 @@ df.ytest <- read.table("./UCI HAR Dataset/test/y_test.txt")
 df.subjecttest <- read.table("./UCI HAR Dataset/test/subject_test.txt")
 
 ```
-#### 3. Labels the data set with descriptive variable names
+#### 3. Merge the training and the test sets to create one data set.
 
-In order to appropriately labels the data set with descriptive variable names, firstly we concatenate `df.features[,1]` and `df.features[,2]` to avoid duplicate name and store into `namesFeatures`, then remove parenthesis, commas and dashes from `namesFeatures`.
+Merge train data and test data by `rbind` function 
 
-Next rename all column name for `df.xtrain` and `df.xtest` by `namesFeatures`
+```R
+df.x <- rbind(df.xtrain, df.xtest)
+df.y <- rbind(df.ytrain, df.ytest)
+df.subject <- rbind(df.subjecttrain, df.subjecttest)
 
-Then rename column name for  `df.ytrain` and `df.ytest` to **"activityno"**
-
-Finally rename column name for  `df.subjecttrain` and `df.subjecttest` to **"subjectno"**
-
-```r
-#concatenate df.features[,1] and df.features[,2]
-namesFeatures <- paste (df.features[,1],df.features[,2], sep="_") 
-namesFeatures <- gsub("[(.*)]", "", namesFeatures) # replace parenthesis with empty string
-namesFeatures <- gsub(",", "_", namesFeatures) # replace commas with underline
-namesFeatures <- gsub("-", "_", namesFeatures) # replace dashes with underline
-
-names(df.xtrain) <- namesFeatures
 names(df.ytrain) <- c("activityno")
-names(df.subjecttrain) <- c("subjectno")
-
-names(df.xtest) <- namesFeatures
-names(df.ytest) <- c("activityno")
-names(df.subjecttest) <- c("subjectno")
+names(df.subject) <- c("subjectno")
 ```
 
-#### 4. Uses descriptive activity name the activities in the data set
+#### 4. Extracts only the measurements on the mean and standard deviation for each measurement.
 
-Merge `df.ytrain` and `df.activitylabels` and assign to `df.ytrain` by **activityno***, then similarly merge `df.ytest` and `df.activitylabels` and assign to `df.ytest`. 
 
-```r
-df.ytest <- merge(x = df.ytest, y = df.activitylabels, by = "activityno", all.x = TRUE)
-df.ytrain <- merge(x = df.ytrain, y = df.activitylabels, by = "activityno", all.x = TRUE)          
-```          
-
-#### 5. Merges the training and the test sets to create one data set.
-Firstly, combine train data and test separately
-Then Merge the training and the test sets to create one data set.
+1. Firstly, use `grepl` function to find the location for the measurements on the mean and standard deviation. 
+2. Then extracts the measurements on the mean and standard deviation
+3. Then extracts the name features for mean and standard deviation
+4. Finally name data frame `df.xmeanstd`
 
 ```r
-# combine train data and test separately
-df.train <- cbind(df.subjecttrain, df.ytrain, df.xtrain)
-df.test  <- cbind(df.subjecttest, df.ytest, df.xtest)
+loc.meanstd <- grepl("-(mean|std)\\(\\)",df.features[, 2]) 
+df.xmeanstd <- df.x[, loc.meanstd]
+VectFeaturesName <- gsub("\\(\\)", "", df.features[loc.meanstd, 2]) 
+VectFeaturesName <- gsub("-", "_", VectFeaturesName) 
+names(df.xmeanstd) <- VectFeaturesName
 
-df <- rbind(df.train, df.test)
 ```
-#### 6. Extracts only the measurements on the mean and standard deviation for each measurement.
 
-1. Firstly, `grep` function to find the location for the measurements on the mean and standard deviation. 
-2. Then sort the combined location vector
-3. Finally extracts the measurements on the mean and standard deviation
+
+#### 5. Uses descriptive activity names to name the activities in the data set
+
+Rename activity labels lower without underscore, and name activity data set
 
 ```r
-loc.mean1 <- grep("mean$", names(df))
-loc.std1 <- grep("std$", names(df))
-loc.mean2 <- grep("_mean_", names(df))
-loc.std2 <- grep("_std_", names(df))
-loc.meanstd <- sort(c(loc.mean1, loc.std1, loc.mean2, loc.std2))
-
-df.meanstd <- df[, loc.meanstd]
+df.activitylabels[,2] <- tolower(sub("_", " ", df.activitylabels[,2]))  ## Rename Var lower without underscore
+df.y1 = df.y 
+df.y1[,1] = df.activitylabels[df.y1[,1],2]   # Temp Variable  
+names(df.y1) <- c("Activity")  # write all activities name for each index
 ```
-#### 7. Creates a second, independent tidy data set with the average of each variable for each activity and each subject.
 
-First using 'group_by' function to group dataset `df` by columns `subjectno`, `activityno`, and `activitylabel`, then apply mean to each values by function `summarise_each`
+#### 6. Appropriately labels the data set with descriptive variable names. 
+
+Create a Data Table with subject, Data activity and measures Tided data
 
 ```r
-df.avg <- df %>% group_by(subjectno, activityno, activitylabel) %>% summarise_each(funs(mean))
+df.tidytable <- cbind(df.subject, df.y1, df.xmeanstd)   
+write.table(df.tidytable, file = "merged_Tidy_Data.txt")   
+```
+
+#### 7. From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
+
+First using 'group_by' function to group dataset `df.tidytable` by columns `subjectno` and `Activity`, then apply mean to each values by function `summarise_each`
+
+```r
+df.avg <- df.tidytable %>% 
+    group_by(subjectno, Activity) %>% 
+    summarise_each(funs(mean))
 write.table(df.avg, file = "run_analysis_avg.txt", row.name=FALSE)
 
 ```
-
